@@ -72,24 +72,17 @@
         150
       ]
     },
-    {
-      "parameters": {
-        "functionCode": "// filter out items that don't mention the topic in title or description\n// topic is kept on the Map Topic to RSS node so we fetch it by reference\nconst topicOrigin = $node[\"Map Topic to RSS\"].json.topic || '';
-const topic = topicOrigin.toLowerCase();
-return items.filter(item => {
-  const t = topic;
-  const title = (item.json.title || '').toLowerCase();
-  const desc = (item.json.content || item.json.description || '').toLowerCase();
-  return title.includes(t) || desc.includes(t);
-});",
-      "name": "Filter Items",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        1050,
-        150
-      ]
-    },
+{
+  "parameters": {
+    "functionCode": "// filter out items that don't mention the topic in title or description\n// topic is kept on the Map Topic to RSS node so we fetch it by reference\nconst topicOrigin = $node[\"Map Topic to RSS\"].json.topic || '';\nconst topic = topicOrigin.toLowerCase();\nreturn items.filter(item => {\n  const t = topic;\n  const title = (item.json.title || '').toLowerCase();\n  const desc = (item.json.content || item.json.description || '').toLowerCase();\n  return title.includes(t) || desc.includes(t);\n});",
+  "name": "Filter Items",
+  "type": "n8n-nodes-base.function",
+  "typeVersion": 1,
+  "position": [
+    1050,
+    150
+  ]
+},
 
     {
       "parameters": {
