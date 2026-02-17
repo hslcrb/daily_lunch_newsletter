@@ -1,0 +1,196 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        50,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hours": [
+                1
+              ],
+              "minutes": [
+                0
+              ]
+            }
+          ]
+        },
+        "timezone": "Asia/Seoul"
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// create one item per topic so the next node can iterate\nconst topics = ['국내정치','국외정치','호주이민','호주','대한민국','AI및SW'];\nreturn topics.map(t=>({json:{topic:t}}));"
+      },
+      "name": "Create Topics",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        450,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// map each topic to one or more RSS feed URLs\n// replace the example URLs with 실제 사용하고 싶은 피드 주소들\nconst mapping = {
+  '국내정치': 'https://rss.yonhapnews.co.kr/politics.xml',
+  '국외정치': 'https://rss.yonhapnews.co.kr/foreign.xml',
+  '호주이민': 'https://www.smh.com.au/rss/feed.xml',
+  '호주': 'https://www.abc.net.au/news/feed/51120/rss.xml',
+  '대한민국': 'https://rss.koreaherald.com/news.php',
+  'AI및SW': 'https://rss.feedburner.com/TechCrunch/'
+};
+const topic = items[0].json.topic;
+const rssUrl = mapping[topic] || '';
+return [{json:{topic, rssUrl}}];"
+      },
+      "name": "Map Topic to RSS",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        650,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.rssUrl}}",
+        "returnData": "allEntries",
+        "options": {}
+      },
+      "name": "RSS Feed Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        850,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// filter out items that don't mention the topic in title or description\n// topic is kept on the Map Topic to RSS node so we fetch it by reference\nconst topicOrigin = $node[\"Map Topic to RSS\"].json.topic || '';
+const topic = topicOrigin.toLowerCase();
+return items.filter(item => {
+  const t = topic;
+  const title = (item.json.title || '').toLowerCase();
+  const desc = (item.json.content || item.json.description || '').toLowerCase();
+  return title.includes(t) || desc.includes(t);
+});",
+      "name": "Filter Items",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        150
+      ]
+    },
+
+    {
+      "parameters": {
+        "functionCode": "// attach the topic again using the mapping node\nconst topic = $node[\"Map Topic to RSS\"].json.topic || '';
+return items.map(i=>({json:{
+  topic,
+  title:i.json.title,
+  content:i.json.content || i.json.description
+}}));",
+      "name": "Format Output",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        850,
+        150
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Create Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Create Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Topics": {
+      "main": [
+        [
+          {
+            "node": "Map Topic to RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Topic to RSS": {
+      "main": [
+        [
+          {
+            "node": "RSS Feed Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Feed Read": {
+      "main": [
+        [
+          {
+            "node": "Filter Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Items": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "timezone": "Asia/Seoul"
+  },
+  "name": "Daily Lunch Newsletter",
+  "description": "매일 13시(KST)에 지정된 주제별 뉴스 기사(제목+내용)를 수집하여 식사시간에 읽기 쉽도록 구성",
+  "versionId": "1"
+}
