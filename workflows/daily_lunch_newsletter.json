@@ -46,28 +46,18 @@
         150
       ]
     },
-    {
-      "parameters": {
-        "functionCode": "// map each topic to one or more RSS feed URLs\n// replace the example URLs with 실제 사용하고 싶은 피드 주소들\nconst mapping = {
-  '국내정치': 'https://rss.yonhapnews.co.kr/politics.xml',
-  '국외정치': 'https://rss.yonhapnews.co.kr/foreign.xml',
-  '호주이민': 'https://www.smh.com.au/rss/feed.xml',
-  '호주': 'https://www.abc.net.au/news/feed/51120/rss.xml',
-  '대한민국': 'https://rss.koreaherald.com/news.php',
-  'AI및SW': 'https://rss.feedburner.com/TechCrunch/'
-};
-const topic = items[0].json.topic;
-const rssUrl = mapping[topic] || '';
-return [{json:{topic, rssUrl}}];"
-      },
-      "name": "Map Topic to RSS",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        650,
-        150
-      ]
-    },
+{
+  "parameters": {
+    "functionCode": "// map each topic to one or more RSS feed URLs\n// replace the example URLs with actual feed URLs\nconst mapping = {\n  '국내정치': 'https://rss.yonhapnews.co.kr/politics.xml',\n  '국외정치': 'https://rss.yonhapnews.co.kr/foreign.xml',\n  '호주이민': 'https://www.smh.com.au/rss/feed.xml',\n  '호주': 'https://www.abc.net.au/news/feed/51120/rss.xml',\n  '대한민국': 'https://rss.koreaherald.com/news.php',\n  'AI및SW': 'https://rss.feedburner.com/TechCrunch/'\n};\nconst topic = items[0].json.topic;\nconst rssUrl = mapping[topic] || '';\nreturn [{json:{topic, rssUrl}}];"
+  },
+  "name": "Map Topic to RSS",
+  "type": "n8n-nodes-base.function",
+  "typeVersion": 1,
+  "position": [
+    650,
+    150
+  ]
+},
     {
       "parameters": {
         "url": "={{$json.rssUrl}}",
