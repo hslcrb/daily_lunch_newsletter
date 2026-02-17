@@ -1,159 +1,118 @@
 {
-  "nodes": [
-    {
-      "parameters": {},
-      "id": "1",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        50,
-        150
-      ]
-    },
-    {
-      "parameters": {
-        "triggerTimes": {
-          "item": [
-            {
-              "hours": [
-                1
-              ],
-              "minutes": [
-                0
-              ]
-            }
-          ]
-        },
-        "timezone": "Asia/Seoul"
-      },
-      "id": "2",
-      "name": "Schedule Trigger",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1,
-      "position": [
-        250,
-        150
-      ]
-    },
-    {
-      "parameters": {
-        "functionCode": "// create one item per topic with RSS url\nconst mapping = {\n  '국내정치': 'https://rss.donga.com/politics.xml',\n  '국외정치': 'https://rss.donga.com/foreign.xml',\n  '호주이민': 'https://www.smh.com.au/rss/feed.xml',\n  '호주': 'https://www.abc.net.au/news/feed/51120/rss.xml',\n  '대한민국': 'https://rss.donga.com/total.xml',\n  'AI및SW': 'https://rss.feedburner.com/TechCrunch/'\n};\nreturn Object.keys(mapping).map(t=>({json:{topic:t,rssUrl:mapping[t]}}));"
-      },
-      "id": "3",
-      "name": "Create Topics",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        450,
-        150
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{$json.rssUrl}}",
-        "returnData": "allEntries",
-        "options": {}
-      },
-      "id": "5",
-      "name": "RSS Feed Read",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1,
-      "position": [
-        850,
-        150
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "functionCode": "// filter items by topic keyword\nconst topic = items[0].json.topic.toLowerCase();\nreturn items.filter(item=>{const title=(item.json.title||'').toLowerCase(); const desc=(item.json.content||item.json.description||'').toLowerCase(); return title.includes(topic)||desc.includes(topic);});"
-      },
-      "id": "6",
-      "name": "Filter Items",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        1050,
-        150
-      ]
-    },
-    {
-      "parameters": {
-        "functionCode": "// propagate topic and pick up title/content\nconst topic = items[0].json.topic||''; return items.map(i=>({json:{topic, title:i.json.title, content:i.json.content||i.json.description}}));"
-      },
-      "id": "7",
-      "name": "Format Output",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        1250,
-        150
-      ]
-    }
-  ],
-  "connections": {
-    "Manual Trigger": {
-      "main": [
-        [
-          {
-            "node": "Create Topics",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Schedule Trigger": {
-      "main": [
-        [
-          {
-            "node": "Create Topics",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Topics": {
-      "main": [
-        [
-          {
-            "node": "RSS Feed Read",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "RSS Feed Read": {
-      "main": [
-        [
-          {
-            "node": "Filter Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter Items": {
-      "main": [
-        [
-          {
-            "node": "Format Output",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
+  "name": "Daily Lunch Newsletter",
+  "description": "매일 13시(KST)에 주제별 뉴스를 수집, Groq AI로 요약하여 Gmail 발송",
   "active": false,
   "settings": {
     "timezone": "Asia/Seoul"
   },
-  "name": "Daily Lunch Newsletter",
-  "description": "매일 13시(KST)에 지정된 주제별 뉴스 기사(제목+내용)를 수집하여 식사시간에 읽기 쉽도록 구성",
-  "versionId": "1"
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [50, 300],
+      "parameters": {}
+    },
+    {
+      "id": "2",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [50, 150],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hours": [13],
+              "minutes": [0]
+            }
+          ]
+        },
+        "timezone": "Asia/Seoul"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Collect All News",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 220],
+      "parameters": {
+        "jsCode": "// ──────────────────────────────────────────\n// 주제별 RSS 수집 및 파싱\n// ──────────────────────────────────────────\nconst topics = [\n  { name: '국내정치', url: 'https://rss.donga.com/politics.xml' },\n  { name: '국외정치', url: 'https://rss.donga.com/foreign.xml' },\n  { name: '호주이민', url: 'https://www.smh.com.au/rss/feed.xml' },\n  { name: '호주',    url: 'https://www.abc.net.au/news/feed/51120/rss.xml' },\n  { name: '대한민국', url: 'https://rss.donga.com/total.xml' },\n  { name: 'AI및SW',  url: 'https://techcrunch.com/feed/' }\n];\n\n// RSS XML에서 최대 maxItems개 기사 추출\nfunction extractRssItems(xml, maxItems = 5) {\n  const items = [];\n  const itemRegex = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\n  let match;\n  while ((match = itemRegex.exec(xml)) !== null && items.length < maxItems) {\n    const block = match[1];\n    // CDATA 포함 title/description 추출\n    const title = (\n      block.match(/<title[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/title>/) ||\n      block.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/)\n    )?.[1] || '';\n    const desc = (\n      block.match(/<description[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/description>/) ||\n      block.match(/<description[^>]*>([\\s\\S]*?)<\\/description>/)\n    )?.[1] || '';\n    const cleanTitle = title.replace(/<[^>]+>/g, '').trim();\n    const cleanDesc  = desc.replace(/<[^>]+>/g, '').trim().slice(0, 250);\n    if (cleanTitle) items.push(`- ${cleanTitle}\\n  ${cleanDesc}`);\n  }\n  return items;\n}\n\n// 토픽별 RSS 수집\nconst sections = [];\nfor (const topic of topics) {\n  try {\n    const response = await $helpers.httpRequest({\n      method: 'GET',\n      url: topic.url,\n      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsletterBot/1.0)' }\n    });\n    const xml = typeof response === 'string' ? response : JSON.stringify(response);\n    const items = extractRssItems(xml, 5);\n    sections.push(`## ${topic.name}\\n${items.length > 0 ? items.join('\\n') : '수집된 기사 없음'}`);\n  } catch (e) {\n    sections.push(`## ${topic.name}\\n수집 실패: ${e.message}`);\n  }\n}\n\nconst today = new Date().toLocaleDateString('ko-KR', {\n  year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'\n});\n\nreturn [{ json: { date: today, rawNews: sections.join('\\n\\n') } }];"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Groq AI 요약",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [550, 220],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"당신은 전문 뉴스 에디터입니다. 주어진 뉴스 기사들을 주제별로 간결하게 요약해주세요. 각 주제는 2~3문장으로 핵심만 정리하고, 점심시간에 읽기 편한 뉴스레터 형식으로 작성해주세요. 영어 기사도 한국어로 요약해주세요.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"다음 뉴스들을 주제별로 요약해주세요:\\n\\n{{ $json.rawNews }}\"\n    }\n  ],\n  \"max_tokens\": 2000,\n  \"temperature\": 0.3\n}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "groq-credential",
+          "name": "Groq API Key"
+        }
+      }
+    },
+    {
+      "id": "5",
+      "name": "Build Email HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 220],
+      "parameters": {
+        "jsCode": "// ──────────────────────────────────────────\n// Groq 응답 파싱 + HTML 이메일 생성\n// ──────────────────────────────────────────\nconst groqResponse = $input.first().json;\nconst summary = groqResponse.choices?.[0]?.message?.content || '요약 생성 실패';\nconst date = $('Collect All News').first().json.date;\n\n// 마크다운 ## 헤더를 HTML <h2>로 변환\nconst formattedSummary = summary\n  .replace(/## (.+)/g, '<h2 style=\"color:#1a1a2e;margin-top:24px;\">$1</h2>')\n  .replace(/\\n/g, '<br>');\n\nconst html = `\n<!DOCTYPE html>\n<html lang=\"ko\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <style>\n    body {\n      font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;\n      max-width: 680px;\n      margin: 0 auto;\n      background: #f4f4f8;\n      color: #222;\n    }\n    .header {\n      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);\n      color: white;\n      padding: 32px 36px;\n      border-radius: 12px 12px 0 0;\n    }\n    .header h1 { margin: 0; font-size: 24px; font-weight: 700; }\n    .header p  { margin: 8px 0 0; opacity: 0.65; font-size: 13px; }\n    .content {\n      background: white;\n      padding: 28px 36px;\n      border-radius: 0 0 12px 12px;\n      line-height: 1.85;\n      font-size: 14.5px;\n    }\n    .footer {\n      text-align: center;\n      color: #aaa;\n      font-size: 11.5px;\n      padding: 20px;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>🗞️ 오늘의 뉴스 브리핑</h1>\n    <p>${date} · AI 요약본</p>\n  </div>\n  <div class=\"content\">\n    ${formattedSummary}\n  </div>\n  <div class=\"footer\">\n    자동 발송 · Daily Lunch Newsletter\n  </div>\n</body>\n</html>\n`;\n\nreturn [{ json: {\n  subject: `🗞️ 오늘의 뉴스 브리핑 - ${date}`,\n  html,\n  summary\n} }];"
+      }
+    },
+    {
+      "id": "6",
+      "name": "Gmail 발송",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1050, 220],
+      "parameters": {
+        "operation": "send",
+        "sendTo": "YOUR_EMAIL@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth",
+          "name": "Gmail Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Collect All News", "type": "main", "index": 0 }]]
+    },
+    "Schedule Trigger": {
+      "main": [[{ "node": "Collect All News", "type": "main", "index": 0 }]]
+    },
+    "Collect All News": {
+      "main": [[{ "node": "Groq AI 요약", "type": "main", "index": 0 }]]
+    },
+    "Groq AI 요약": {
+      "main": [[{ "node": "Build Email HTML", "type": "main", "index": 0 }]]
+    },
+    "Build Email HTML": {
+      "main": [[{ "node": "Gmail 발송", "type": "main", "index": 0 }]]
+    }
+  }
 }
