@@ -2,6 +2,7 @@
   "nodes": [
     {
       "parameters": {},
+      "id": "1",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
@@ -26,6 +27,7 @@
         },
         "timezone": "Asia/Seoul"
       },
+      "id": "2",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
@@ -38,6 +40,7 @@
       "parameters": {
         "functionCode": "// create one item per topic so the next node can iterate\nconst topics = ['국내정치','국외정치','호주이민','호주','대한민국','AI및SW'];\nreturn topics.map(t=>({json:{topic:t}}));"
       },
+      "id": "3",
       "name": "Create Topics",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
@@ -50,6 +53,7 @@
   "parameters": {
     "functionCode": "// map each topic to one or more RSS feed URLs\n// replace the example URLs with actual feed URLs\nconst mapping = {\n  '국내정치': 'https://rss.yonhapnews.co.kr/politics.xml',\n  '국외정치': 'https://rss.yonhapnews.co.kr/foreign.xml',\n  '호주이민': 'https://www.smh.com.au/rss/feed.xml',\n  '호주': 'https://www.abc.net.au/news/feed/51120/rss.xml',\n  '대한민국': 'https://rss.koreaherald.com/news.php',\n  'AI및SW': 'https://rss.feedburner.com/TechCrunch/'\n};\nconst topic = items[0].json.topic;\nconst rssUrl = mapping[topic] || '';\nreturn [{json:{topic, rssUrl}}];"
   },
+  "id": "4",
   "name": "Map Topic to RSS",
   "type": "n8n-nodes-base.function",
   "typeVersion": 1,
@@ -58,23 +62,26 @@
     150
   ]
 },
-    {
-      "parameters": {
-        "url": "={{$json.rssUrl}}",
-        "returnData": "allEntries",
-        "options": {}
-      },
-      "name": "RSS Feed Read",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1,
-      "position": [
-        850,
-        150
-      ]
-    },
 {
   "parameters": {
-    "functionCode": "// filter out items that don't mention the topic in title or description\n// topic is kept on the Map Topic to RSS node so we fetch it by reference\nconst topicOrigin = $node[\"Map Topic to RSS\"].json.topic || '';\nconst topic = topicOrigin.toLowerCase();\nreturn items.filter(item => {\n  const t = topic;\n  const title = (item.json.title || '').toLowerCase();\n  const desc = (item.json.content || item.json.description || '').toLowerCase();\n  return title.includes(t) || desc.includes(t);\n});",
+    "url": "={{$json.rssUrl}}",
+    "returnData": "allEntries",
+    "options": {}
+  },
+  "id": "5",
+  "name": "RSS Feed Read",
+  "type": "n8n-nodes-base.rssFeedRead",
+  "typeVersion": 1,
+  "position": [
+    850,
+    150
+  ]
+},
+{
+  "parameters": {
+    "functionCode": "// filter out items that don't mention the topic in title or description\n// topic is kept on the Map Topic to RSS node so we fetch it by reference\nconst topicOrigin = $node[\"Map Topic to RSS\"].json.topic || '';\nconst topic = topicOrigin.toLowerCase();\nreturn items.filter(item => {\n  const t = topic;\n  const title = (item.json.title || '').toLowerCase();\n  const desc = (item.json.content || item.json.description || '').toLowerCase();\n  return title.includes(t) || desc.includes(t);\n});"
+  },
+  "id": "6",
   "name": "Filter Items",
   "type": "n8n-nodes-base.function",
   "typeVersion": 1,
@@ -84,22 +91,19 @@
   ]
 },
 
-    {
-      "parameters": {
-        "functionCode": "// attach the topic again using the mapping node\nconst topic = $node[\"Map Topic to RSS\"].json.topic || '';
-return items.map(i=>({json:{
-  topic,
-  title:i.json.title,
-  content:i.json.content || i.json.description
-}}));",
-      "name": "Format Output",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        850,
-        150
-      ]
-    }
+{
+  "parameters": {
+    "functionCode": "// attach the topic again using the mapping node\nconst topic = $node[\"Map Topic to RSS\"].json.topic || '';\nreturn items.map(i=>({json:{\n  topic,\n  title:i.json.title,\n  content:i.json.content || i.json.description\n}}));"
+  },
+  "id": "7",
+  "name": "Format Output",
+  "type": "n8n-nodes-base.function",
+  "typeVersion": 1,
+  "position": [
+    1250,
+    150
+  ]
+}
   ],
   "connections": {
     "Manual Trigger": {
